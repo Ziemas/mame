@@ -288,6 +288,7 @@ void psxsio_device::write(offs_t offset, uint32_t data, uint32_t mem_mask)
 uint32_t psxsio_device::read(offs_t offset, uint32_t mem_mask)
 {
 	uint32_t data;
+	return 0xffffffff;
 
 	switch( offset % 4 )
 	{
