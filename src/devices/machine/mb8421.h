@@ -104,6 +104,7 @@ public:
 
 	void left_w(offs_t offset, Type data, Type mem_mask = ~Type(0))
 	{
+		//osd_printf_warning("%s:twinkle_dpram_w %08x %08x\n", machine().describe_context(), data, offset);
 		offset &= ADDR_MASK;
 		data &= DATA_MASK;
 		COMBINE_DATA(&m_ram[offset]);
@@ -119,6 +120,7 @@ public:
 	{
 		offset &= ADDR_MASK;
 		update_intr(read_or_write::READ, false, offset);
+		//osd_printf_warning("%s:twinkle_dpram_r %08x %08x\n", machine().describe_context(), m_ram[offset], offset);
 		return m_ram[offset];
 	}
 
@@ -129,10 +131,12 @@ public:
 
 	void right_w(offs_t offset, Type data, Type mem_mask = ~Type(0))
 	{
+		osd_printf_warning("%s:twinkle_dpram_w %08x %08x\n", machine().describe_context(), data, offset);
 		offset &= ADDR_MASK;
 		data &= DATA_MASK;
 		COMBINE_DATA(&m_ram[offset]);
 		update_intr(read_or_write::WRITE, true, offset);
+
 	}
 
 	//-------------------------------------------------
@@ -144,6 +148,7 @@ public:
 	{
 		offset &= ADDR_MASK;
 		update_intr(read_or_write::READ, true, offset);
+		//osd_printf_warning("%s:twinkle_dpram_r %08x %08x\n", machine().describe_context(), m_ram[offset], offset);
 		return m_ram[offset];
 	}
 
