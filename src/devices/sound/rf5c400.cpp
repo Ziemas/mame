@@ -353,7 +353,7 @@ uint16_t rf5c400_device::rf5c400_r(offs_t offset, uint16_t mem_mask)
 {
 	if (offset < 0x400)
 	{
-		//osd_printf_debug("%s:rf5c400_r: %08X, %08X\n", machine().describe_context(), offset, mem_mask);
+		osd_printf_debug("%s:rf5c400_r: %08X, %08X\n", machine().describe_context(), offset, mem_mask);
 
 		switch(offset)
 		{
@@ -400,22 +400,25 @@ uint16_t rf5c400_device::rf5c400_r(offs_t offset, uint16_t mem_mask)
 
 			default:
 			{
-				//osd_printf_debug("%s:rf5c400_r: %08X, %08X\n", machine().describe_context(), offset, mem_mask);
+				osd_printf_debug("%s:rf5c400_r: %08X, %08X\n", machine().describe_context(), offset, mem_mask);
 				return 0;
 			}
 		}
 	}
 	else
 	{
-		//int ch = (offset >> 5) & 0x1f;
+		//osd_printf_debug("%s:rf5c400_r: %08X, %08X\n", machine().describe_context(), offset, mem_mask);
+		int ch = (offset >> 5) & 0x1f;
 		int reg = (offset & 0x1f);
 
 		switch (reg)
 		{
 		case 0x0F:      // unknown read
-			return 0;
+			osd_printf_debug("%s:rf5c400_r ch_unk0f: %08X, %02X, %08X\n", machine().describe_context(), reg, ch, mem_mask);
+			return 0xf;
 
 		default:
+			osd_printf_debug("%s:rf5c400_r ch_unk: %08X, %02X, %08X\n", machine().describe_context(), reg, ch, mem_mask);
 			return 0;
 		}
 	}
@@ -429,16 +432,20 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 		{
 			case 0x00:
 			{
+
+				osd_printf_debug("%s:rf5c400_w status: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
 				m_rf5c400_status = data;
 				break;
 			}
 
 			case 0x01:      // channel control
 			{
+				osd_printf_debug("%s:rf5c400_w ch_ctrl: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
 				int ch = data & 0x1f;
 				switch ( data & 0x60 )
 				{
 					case 0x60:
+						osd_printf_debug("%s:rf5c400 Starting voice %02X\n", machine().describe_context(), ch);
 						m_channels[ch].pos =
 							((uint32_t)(m_channels[ch].startH & 0xFF00) << 8) | m_channels[ch].startL;
 						m_channels[ch].pos <<= 16;
@@ -448,6 +455,7 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 						m_channels[ch].env_step  = m_env_tables.ar(m_channels[ch]);
 						break;
 					case 0x40:
+						osd_printf_debug("%s:rf5c400 Releasing voice %02X\n", machine().describe_context(), ch);
 						if (m_channels[ch].env_phase != PHASE_NONE)
 						{
 							m_channels[ch].env_phase = PHASE_RELEASE;
@@ -462,6 +470,7 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 						}
 						break;
 					default:
+						osd_printf_debug("%s:rf5c400 Muting voice %02X\n", machine().describe_context(), ch);
 						m_channels[ch].env_phase = PHASE_NONE;
 						m_channels[ch].env_level = 0.0;
 						m_channels[ch].env_step  = 0.0;
@@ -472,6 +481,7 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 
 			case 0x08:
 			{
+				osd_printf_debug("%s:rf5c400_w req_ch: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
 				// There's some other data stuffed in the upper bits beyond the channel: data >> 5
 				// The other data might be some kind of register or command. I've seen 0, 4, 5, and 6.
 				// Firebeat uses 6 when polling rf5c400_r 0x09.
@@ -480,22 +490,27 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 			}
 
 			case 0x09:      // relative to env attack (0x0c00/ 0x1c00/ 0x1e00)
+				osd_printf_debug("%s:rf5c400_w unk09: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 
 			case 0x11:      // memory r/w address, bits 15 - 0
 			{
 				m_ext_mem_address &= ~0xffff;
 				m_ext_mem_address |= data;
+				return;
 				break;
 			}
 			case 0x12:      // memory r/w address, bits 23 - 16
 			{
 				m_ext_mem_address &= 0xffff;
 				m_ext_mem_address |= (uint32_t)(data) << 16;
+				return;
 				break;
 			}
 			case 0x13:      // memory write data
 			{
 				m_ext_mem_data = data;
+				return;
 				break;
 			}
 
@@ -505,25 +520,47 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 				{
 					this->space().write_word(m_ext_mem_address << 1, m_ext_mem_data);
 				}
+				return;
 				break;
 			}
 
 			case 0x21:      // reverb(character).w
+				osd_printf_debug("%s:rf5c400_w reverb_character: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x32:      // reverb(pre-lpf).w
+				osd_printf_debug("%s:rf5c400_w reverb_prelpf: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x2B:      // reverb(level).w
+				osd_printf_debug("%s:rf5c400_w reverb_level: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x20:      // ???.b : reverb(time).b
-
+				osd_printf_debug("%s:rf5c400_w reverb_time: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x2C:      // chorus(level).w
+				osd_printf_debug("%s:rf5c400_w chorus_level: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x30:      // chorus(rate).w
+				osd_printf_debug("%s:rf5c400_w chorus_rate: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x22:      // chorus(macro).w
+				osd_printf_debug("%s:rf5c400_w chorus_macro: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x23:      // chorus(depth).w
+				osd_printf_debug("%s:rf5c400_w chorus_depth: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x24:      // chorus(macro).w
+				osd_printf_debug("%s:rf5c400_w chorus_macro2: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x2F:      // chorus(depth).w
+				osd_printf_debug("%s:rf5c400_w chorus_depth2: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 			case 0x27:      // chorus(send level to reverb).w
+				osd_printf_debug("%s:rf5c400_w chorus_sendlvl: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				break;
 
 			default:
 			{
-				//osd_printf_debug("%s:rf5c400_w: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
+				osd_printf_debug("%s:rf5c400_w: %08X, %08X, %08X\n", machine().describe_context(), data, offset, mem_mask);
 				break;
 			}
 		}
@@ -541,53 +578,63 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 		{
 			case 0x00:      // sample start address, bits 23 - 16
 			{
+				osd_printf_debug("%s:rf5c400_w ch_ssah: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				channel->startH = data;
 				break;
 			}
 			case 0x01:      // sample start address, bits 15 - 0
 			{
+				osd_printf_debug("%s:rf5c400_w ch_ssal: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				channel->startL = data;
 				break;
 			}
 			case 0x02:      // sample playing frequency
 			{
+				osd_printf_debug("%s:rf5c400_w ch_step: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				channel->step = ((data & 0x1fff) << (data >> 13)) * 4;
 				channel->freq = data;
 				break;
 			}
 			case 0x03:      // sample end address, bits 15 - 0
 			{
+				osd_printf_debug("%s:rf5c400_w ch_endl: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				channel->endL = data;
 				break;
 			}
 			case 0x04:      // sample end address, bits 23 - 16 , sample loop 23 - 16
 			{
+				osd_printf_debug("%s:rf5c400_w ch_endh: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				channel->endHloopH = data;
 				break;
 			}
 			case 0x05:      // sample loop offset, bits 15 - 0
 			{
+				osd_printf_debug("%s:rf5c400_w ch_lsal: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				channel->loopL = data;
 				break;
 			}
 			case 0x06:      // channel volume
 			{
+				osd_printf_debug("%s:rf5c400_w ch_pan: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				channel->pan = data;
 				break;
 			}
 			case 0x07:      // effect depth
 			{
+				osd_printf_debug("%s:rf5c400_w ch_effect_depth: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// 0xCCRR: CC = chorus send depth, RR = reverb send depth
 				channel->effect = data;
 				break;
 			}
 			case 0x08:      // volume, flag
 			{
+				osd_printf_debug("%s:rf5c400_w ch_volume: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				channel->volume = data;
 				break;
 			}
 			case 0x09:      // env attack
 			{
+				osd_printf_debug("%s:rf5c400_w ch_attack: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// 0x0100: max speed                  (in case of attack <= 0x40)
 				// 0xXX40: XX = attack-0x3f (encoded) (in case of attack > 0x40)
 				//
@@ -596,16 +643,19 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 			}
 			case 0x0A:      // relative to env attack ?
 			{
+				osd_printf_debug("%s:rf5c400_w ch_unk0a: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// always 0x0100/0x140
 				break;
 			}
 			case 0x0B:      // relative to env decay ?
 			{
+				osd_printf_debug("%s:rf5c400_w ch_unk0b: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// always 0x0100/0x140/0x180
 				break;
 			}
 			case 0x0C:      // env decay
 			{
+				osd_printf_debug("%s:rf5c400_w ch_decay: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// 0xXX70: XX = decay (encoded) (in case of decay > 0x71)
 				// 0xXX80: XX = decay (encoded) (in case of decay <= 0x71)
 				channel->decay = data;
@@ -613,22 +663,26 @@ void rf5c400_device::rf5c400_w(offs_t offset, uint16_t data, uint16_t mem_mask)
 			}
 			case 0x0D:      // relative to env release ?
 			{
+				osd_printf_debug("%s:rf5c400_w ch_unk0d: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// always 0x0100/0x140
 				break;
 			}
 			case 0x0E:      // env release
 			{
+				osd_printf_debug("%s:rf5c400_w ch_release: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// 0xXX70: XX = release-0x1f (encoded) (0x01 if release <= 0x20)
 				channel->release = data;
 				break;
 			}
 			case 0x0F:      // unknown write
 			{
+				osd_printf_debug("%s:rf5c400_w ch_unk0f: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// always 0x0000
 				break;
 			}
 			case 0x10:      // resonance, cutoff freq.
 			{
+				osd_printf_debug("%s:rf5c400_w ch_reso: %08X, %08X, %02X, %08X\n", machine().describe_context(), data, reg, ch, mem_mask);
 				// bit 15-12: resonance
 				// bit 11-0 : cutoff frequency
 				channel->cutoff = data;
