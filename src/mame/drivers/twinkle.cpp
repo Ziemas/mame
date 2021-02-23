@@ -302,6 +302,7 @@ private:
 	void spu_wavebank_w(offs_t offset, uint16_t data, uint16_t mem_mask = ~0);
 	DECLARE_WRITE_LINE_MEMBER(spu_ata_irq);
 	DECLARE_WRITE_LINE_MEMBER(spu_ata_dmarq);
+	INTERRUPT_GEN_MEMBER(periodic_int);
 	void scsi_dma_read( uint32_t *p_n_psxram, uint32_t n_address, int32_t n_size );
 	void scsi_dma_write( uint32_t *p_n_psxram, uint32_t n_address, int32_t n_size );
 
@@ -1036,6 +1037,12 @@ void twinkle_state::cdrom_config(device_t *device)
 	device->subdevice<cdda_device>("cdda")->add_route(1, "^^speakerright", 1.0);
 }
 
+INTERRUPT_GEN_MEMBER(twinkle_state::periodic_int)
+{
+	m_audiocpu->set_input_line(M68K_IRQ_1, ASSERT_LINE);
+	m_audiocpu->set_input_line(M68K_IRQ_2, ASSERT_LINE);
+}
+
 void twinkle_state::twinkle(machine_config &config)
 {
 	/* basic machine hardware */
@@ -1047,8 +1054,7 @@ void twinkle_state::twinkle(machine_config &config)
 
 	M68000(config, m_audiocpu, 32000000/2);    /* 16.000 MHz */
 	m_audiocpu->set_addrmap(AS_PROGRAM, &twinkle_state::sound_map);
-	m_audiocpu->set_periodic_int(FUNC(twinkle_state::irq1_line_assert), attotime::from_hz(60));
-	m_audiocpu->set_periodic_int(FUNC(twinkle_state::irq2_line_assert), attotime::from_hz(60));
+	m_audiocpu->set_periodic_int(FUNC(twinkle_state::periodic_int), attotime::from_hz(60));
 
 	WATCHDOG_TIMER(config, "watchdog").set_time(attotime::from_msec(1200)); /* check TD pin on LTC1232 */
 
